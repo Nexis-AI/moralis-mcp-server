@@ -23,5 +23,9 @@ RUN npm install --production --ignore-scripts
 # Default environment
 ENV NODE_ENV=production
 
+# Railway (and most hosted platforms) expect an HTTP server listening on $PORT.
+# Force Streamable HTTP transport in containerized deployments.
+EXPOSE 3000
+
 # Default execution command
-ENTRYPOINT ["node", "./dist/index.js"]
+ENTRYPOINT ["node", "./dist/index.js", "--transport", "streamable-http"]
