@@ -12,6 +12,14 @@ enum TransportType {
   STREAMABLE_HTTP = 'streamable-http',
 }
 
+function resolvePort(): number {
+  const raw = process.env.PORT?.trim();
+  if (!raw) return 3000;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 3000;
+  return parsed;
+}
+
 async function startStdioServer() {
   // Set up stdio transport
   try {
@@ -29,7 +37,7 @@ async function startStdioServer() {
 async function startWebServer() {
   // Set up Web Server transport
   try {
-    await setupWebServer(await serverSetup(), 3000);
+    await setupWebServer(await serverSetup(), resolvePort());
   } catch (error) {
     console.error('Error setting up web server:', error);
     process.exit(1);
@@ -39,7 +47,7 @@ async function startWebServer() {
 async function startStreamableHttpServer() {
   // Set up StreamableHTTP transport
   try {
-    await setupStreamableHttpServer(await serverSetup(), 3000);
+    await setupStreamableHttpServer(await serverSetup(), resolvePort());
   } catch (error) {
     console.error('Error setting up StreamableHTTP server:', error);
     process.exit(1);
@@ -60,6 +68,11 @@ async function main(transport: string) {
     case TransportType.STREAMABLE_HTTP:
       await startStreamableHttpServer();
       break;
+    default:
+      console.error(
+        `Invalid MCP transport "${transport}". Use one of: ${Object.values(TransportType).join(", ")}`,
+      );
+      process.exit(1);
   }
 }
 
@@ -76,7 +89,9 @@ process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
 
 // accepts an optional argument --transport to specify the transport type
-let transport = process.env.MCP_TRANSPORT || TransportType.STDIO;
+const envTransport = process.env.MCP_TRANSPORT?.trim();
+const hasPort = Boolean(process.env.PORT && process.env.PORT.trim().length > 0);
+let transport = envTransport ? envTransport : hasPort ? TransportType.STREAMABLE_HTTP : TransportType.STDIO;
 const args = process.argv.slice(2);
 if (args.length > 0) {
   const transportType = args[0];
