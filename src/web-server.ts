@@ -160,6 +160,16 @@ export async function setupWebServer(server: Server, port = 3000) {
   // Store active SSE transports by session ID
   const transports: { [sessionId: string]: SSETransport } = {};
 
+  // Root route (useful for platform health checks that probe "/")
+  app.get('/', (c) => {
+    return c.json({
+      status: 'OK',
+      server: Config.SERVER_NAME,
+      version: Config.SERVER_VERSION,
+      endpoints: { health: '/health', sse: '/sse' },
+    });
+  });
+
   // Add a simple health check endpoint
   app.get('/health', (c) => {
     return c.json({
@@ -306,6 +316,7 @@ export async function setupWebServer(server: Server, port = 3000) {
     {
       fetch: app.fetch,
       port,
+      hostname: '0.0.0.0',
     },
     (info) => {
       console.error(`MCP Web Server running at http://localhost:${info.port}`);

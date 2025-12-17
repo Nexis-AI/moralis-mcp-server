@@ -99,6 +99,16 @@ export async function setupStreamableHttpServer(server: Server, port = 3000) {
   // Create MCP handler
   const mcpHandler = new MCPStreamableHttpServer(server);
 
+  // Root route (useful for platform health checks that probe "/")
+  app.get('/', (c) => {
+    return c.json({
+      status: 'OK',
+      server: Config.SERVER_NAME,
+      version: Config.SERVER_VERSION,
+      endpoints: { health: '/health', mcp: '/mcp' },
+    });
+  });
+
   // Add a simple health check endpoint
   app.get('/health', (c) => {
     return c.json({
@@ -184,6 +194,7 @@ export async function setupStreamableHttpServer(server: Server, port = 3000) {
     {
       fetch: app.fetch,
       port,
+      hostname: '0.0.0.0',
     },
     (info) => {
       console.error(
