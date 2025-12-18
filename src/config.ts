@@ -1,6 +1,11 @@
 // Load environment variables from .env file
+import { createRequire } from 'node:module';
 import dotenv from 'dotenv';
+
 dotenv.config();
+
+const require = createRequire(import.meta.url);
+const packageJson = require('../package.json') as { version?: string };
 
 export type SchemaConfig = {
   /** Tool prefix */
@@ -34,9 +39,10 @@ const configs: Record<string, SchemaConfig> = {
  */
 export class Config {
   static SERVER_NAME = process.env.SERVER_NAME || 'Moralis MCP';
-  static SERVER_VERSION = process.env.SERVER_VERSION || '1.0.0';
+  static SERVER_VERSION =
+    process.env.SERVER_VERSION || packageJson.version || '1.0.0';
   static SERVER_CONFIG = configs[process.env.SERVER_CONFIG || ''];
-  static MORALIS_API_KEY = process.env.MORALIS_API_KEY
+  static MORALIS_API_KEY = process.env.MORALIS_API_KEY;
   static EVM_CONFIG = configs.evm;
   static SOL_CONFIG = configs.solana;
 }

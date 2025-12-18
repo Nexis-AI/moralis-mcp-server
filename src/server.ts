@@ -64,11 +64,19 @@ export async function serverSetup(
    * Map of tool definitions by name
    */
   let toolDefinitionMap: Record<string, McpToolDefinition> = {};
-  for (const config of configArray)
-    toolDefinitionMap = {
-      ...toolDefinitionMap,
-      ...(await mapToolDefinitions(config)),
-    };
+  for (const config of configArray) {
+    try {
+      toolDefinitionMap = {
+        ...toolDefinitionMap,
+        ...(await mapToolDefinitions(config)),
+      };
+    } catch (error) {
+      console.error(
+        `Failed to load tools from OpenAPI spec (${config.specUrl}). Starting without these tools.`,
+        error,
+      );
+    }
+  }
 
   /**
    * Security schemes from the OpenAPI spec

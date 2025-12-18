@@ -82,6 +82,17 @@ The server accepts an optional `--transport` argument to specify the transport t
 - `web`: Starts a HTTP server for communication.
 - `streamable-http`: Starts an HTTP server with streamable endpoints.
 
+### 🚄 Deploying on Railway (or any platform with `PORT`)
+
+If `PORT` is set (as it is on Railway), the server will default to `streamable-http` and listen on `PORT` automatically. You can override this by setting `MCP_TRANSPORT`.
+
+Endpoints:
+- `GET /health`
+- `GET|POST|DELETE /mcp`
+
+In Railway, set at least:
+- `MORALIS_API_KEY`
+
 ### Examples
 
 1. **Using the default `stdio` transport**:
@@ -180,5 +191,4 @@ This documentation covers endpoints for:
 - NFT metadata and ownership
 - Transfers and transactions
 - And more
-
 

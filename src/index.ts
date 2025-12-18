@@ -12,12 +12,72 @@ enum TransportType {
   STREAMABLE_HTTP = 'streamable-http',
 }
 
-function resolvePort(): number {
-  const raw = process.env.PORT?.trim();
-  if (!raw) return 3000;
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) return 3000;
-  return parsed;
+const DEFAULT_PORT = 3000;
+
+function parsePort(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const port = Number.parseInt(value, 10);
+  if (!Number.isFinite(port) || port <= 0 || port > 65535) return undefined;
+  return port;
+}
+
+function isHostedEnvironment(): boolean {
+  return Boolean(
+    process.env.PORT ||
+      process.env.RAILWAY_PROJECT_ID ||
+      process.env.RAILWAY_SERVICE_ID ||
+      process.env.RAILWAY_ENVIRONMENT_ID,
+  );
+}
+
+function isValidTransport(value: string): value is TransportType {
+  return Object.values(TransportType).includes(value as TransportType);
+}
+
+function parseCliArgs(argv: string[]): { transport?: TransportType; port?: number } {
+  const result: { transport?: TransportType; port?: number } = {};
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+
+    if (arg === '--transport') {
+      const next = argv[i + 1];
+      if (!next) {
+        console.error(
+          'Missing value for --transport. Use one of: stdio, web, streamable-http.',
+        );
+        process.exit(1);
+      }
+      if (!isValidTransport(next)) {
+        console.error(
+          `Invalid --transport value '${next}'. Use one of: stdio, web, streamable-http.`,
+        );
+        process.exit(1);
+      }
+      result.transport = next;
+      i += 1;
+      continue;
+    }
+
+    if (arg === '--port') {
+      const next = argv[i + 1];
+      const port = parsePort(next);
+      if (!next || !port) {
+        console.error('Invalid --port value. Use an integer between 1 and 65535.');
+        process.exit(1);
+      }
+      result.port = port;
+      i += 1;
+      continue;
+    }
+
+    console.error(
+      `Invalid argument '${arg}'. Supported args: --transport <stdio|web|streamable-http>, --port <number>.`,
+    );
+    process.exit(1);
+  }
+
+  return result;
 }
 
 async function startStdioServer() {
@@ -37,7 +97,8 @@ async function startStdioServer() {
 async function startWebServer() {
   // Set up Web Server transport
   try {
-    await setupWebServer(await serverSetup(), resolvePort());
+    const port = parsePort(process.env.PORT) ?? DEFAULT_PORT;
+    await setupWebServer(await serverSetup(), port);
   } catch (error) {
     console.error('Error setting up web server:', error);
     process.exit(1);
@@ -47,7 +108,8 @@ async function startWebServer() {
 async function startStreamableHttpServer() {
   // Set up StreamableHTTP transport
   try {
-    await setupStreamableHttpServer(await serverSetup(), resolvePort());
+    const port = parsePort(process.env.PORT) ?? DEFAULT_PORT;
+    await setupStreamableHttpServer(await serverSetup(), port);
   } catch (error) {
     console.error('Error setting up StreamableHTTP server:', error);
     process.exit(1);
@@ -70,7 +132,7 @@ async function main(transport: string) {
       break;
     default:
       console.error(
-        `Invalid MCP transport "${transport}". Use one of: ${Object.values(TransportType).join(", ")}`,
+        `Unknown transport '${transport}'. Use one of: stdio, web, streamable-http.`,
       );
       process.exit(1);
   }
@@ -88,22 +150,20 @@ async function cleanup() {
 process.on('SIGINT', cleanup);
 process.on('SIGTERM', cleanup);
 
-// accepts an optional argument --transport to specify the transport type
-const envTransport = process.env.MCP_TRANSPORT?.trim();
-const hasPort = Boolean(process.env.PORT && process.env.PORT.trim().length > 0);
-let transport = envTransport ? envTransport : hasPort ? TransportType.STREAMABLE_HTTP : TransportType.STDIO;
-const args = process.argv.slice(2);
-if (args.length > 0) {
-  const transportType = args[0];
-  if (transportType === '--transport' && args[1]) {
-    transport = args[1];
-  } else {
-    console.error(
-      'Invalid argument. Use --transport followed by the transport type (stdio, web, streamable-http).',
-    );
-    process.exit(1);
-  }
+// Accept optional CLI args: --transport, --port
+const cliArgs = parseCliArgs(process.argv.slice(2));
+if (cliArgs.port) {
+  process.env.PORT = String(cliArgs.port);
 }
+
+const defaultTransport: TransportType =
+  process.env.MCP_TRANSPORT && isValidTransport(process.env.MCP_TRANSPORT)
+    ? (process.env.MCP_TRANSPORT as TransportType)
+    : isHostedEnvironment()
+      ? TransportType.STREAMABLE_HTTP
+      : TransportType.STDIO;
+
+const transport = cliArgs.transport ?? defaultTransport;
 
 // Start the server
 main(transport).catch((error) => {

@@ -39,7 +39,7 @@ class SSETransport implements Transport {
 
     // Set up stream abort handler
     this.stream.onAbort(() => {
-      console.error(`SSE connection aborted for session ${this._sessionId}`);
+      console.log(`SSE connection aborted for session ${this._sessionId}`);
       this.close();
     });
   }
@@ -153,6 +153,7 @@ class SSETransport implements Transport {
 export async function setupWebServer(server: Server, port = 3000) {
   // Create Hono app
   const app = new Hono();
+  const hostname = process.env.HOSTNAME || process.env.HOST || '0.0.0.0';
 
   // Enable CORS
   app.use('*', cors());
@@ -186,14 +187,14 @@ export async function setupWebServer(server: Server, port = 3000) {
       const transport = new SSETransport('/api/messages', stream);
       const sessionId = transport.sessionId;
 
-      console.error(`New SSE connection established: ${sessionId}`);
+      console.log(`New SSE connection established: ${sessionId}`);
 
       // Store the transport
       transports[sessionId] = transport;
 
       // Set up cleanup on transport close
       transport.onclose = () => {
-        console.error(`SSE connection closed for session ${sessionId}`);
+        console.log(`SSE connection closed for session ${sessionId}`);
         delete transports[sessionId];
       };
 
@@ -316,15 +317,15 @@ export async function setupWebServer(server: Server, port = 3000) {
     {
       fetch: app.fetch,
       port,
-      hostname: '0.0.0.0',
+      hostname,
     },
     (info) => {
-      console.error(`MCP Web Server running at http://localhost:${info.port}`);
-      console.error(`- SSE Endpoint: http://localhost:${info.port}/sse`);
-      console.error(
+      console.log(`MCP Web Server running at http://localhost:${info.port}`);
+      console.log(`- SSE Endpoint: http://localhost:${info.port}/sse`);
+      console.log(
         `- Messages Endpoint: http://localhost:${info.port}/api/messages?sessionId=YOUR_SESSION_ID`,
       );
-      console.error(`- Health Check: http://localhost:${info.port}/health`);
+      console.log(`- Health Check: http://localhost:${info.port}/health`);
     },
   );
 
