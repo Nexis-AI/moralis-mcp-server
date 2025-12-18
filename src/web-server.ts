@@ -153,7 +153,10 @@ class SSETransport implements Transport {
 export async function setupWebServer(server: Server, port = 3000) {
   // Create Hono app
   const app = new Hono();
-  const hostname = process.env.HOSTNAME || process.env.HOST || '0.0.0.0';
+  // Bind to all interfaces by default (required for hosted environments).
+  // Do NOT default to `HOSTNAME` because container runtimes often set it to an
+  // internal name that resolves to loopback, making the service unreachable.
+  const hostname = process.env.HOST || '0.0.0.0';
 
   // Enable CORS
   app.use('*', cors());
