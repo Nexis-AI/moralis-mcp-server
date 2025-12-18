@@ -64,19 +64,24 @@ export async function serverSetup(
    * Map of tool definitions by name
    */
   let toolDefinitionMap: Record<string, McpToolDefinition> = {};
-  for (const config of configArray) {
-    try {
-      toolDefinitionMap = {
-        ...toolDefinitionMap,
-        ...(await mapToolDefinitions(config)),
-      };
-    } catch (error) {
-      console.error(
-        `Failed to load tools from OpenAPI spec (${config.specUrl}). Starting without these tools.`,
-        error,
-      );
+  const toolDefinitionsReady = (async () => {
+    let merged: Record<string, McpToolDefinition> = {};
+    for (const config of configArray) {
+      try {
+        merged = {
+          ...merged,
+          ...(await mapToolDefinitions(config)),
+        };
+      } catch (error) {
+        console.error(
+          `Failed to load tools from OpenAPI spec (${config.specUrl}). Starting without these tools.`,
+          error,
+        );
+      }
     }
-  }
+    toolDefinitionMap = merged;
+    return merged;
+  })();
 
   /**
    * Security schemes from the OpenAPI spec
@@ -91,6 +96,7 @@ export async function serverSetup(
   };
 
   server.setRequestHandler(ListToolsRequestSchema, async () => {
+    await toolDefinitionsReady;
     const toolsForClient: Tool[] = Object.values(toolDefinitionMap).map(
       (def) => ({
         name: def.name,
@@ -104,6 +110,7 @@ export async function serverSetup(
   server.setRequestHandler(
     CallToolRequestSchema,
     async (request: CallToolRequest, c): Promise<CallToolResult> => {
+      await toolDefinitionsReady;
       const { name: toolName, arguments: toolArgs } = request.params;
       const toolDefinition = toolDefinitionMap[toolName];
       if (!toolDefinition) {
@@ -128,6 +135,7 @@ export async function serverSetup(
   );
 
   server.setRequestHandler(ListPromptsRequestSchema, async () => {
+    await toolDefinitionsReady;
     const promptsForClient: Prompt[] = [];
     for (const tool of Object.values(toolDefinitionMap)) {
       if (tool.prompt) {
@@ -145,6 +153,7 @@ export async function serverSetup(
   server.setRequestHandler(
     GetPromptRequestSchema,
     async (request: GetPromptRequest, c): Promise<GetPromptResult> => {
+      await toolDefinitionsReady;
       const { name: toolName, arguments: toolArgs } = request.params;
       const toolDefinition = toolDefinitionMap[toolName];
       if (!toolDefinition) {
