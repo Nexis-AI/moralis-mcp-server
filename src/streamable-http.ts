@@ -8,6 +8,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { toReqRes, toFetchResponse } from 'fetch-to-node';
 import { Config } from './config.js';
+import { resolveBindHost } from './utils/bind-host.js';
 
 /**
  * Sets up a web server for the MCP server using StreamableHTTP transport
@@ -17,12 +18,14 @@ import { Config } from './config.js';
  * @returns The Hono app instance
  */
 export async function setupStreamableHttpServer(server: Server, port = 3000) {
+  console.error(`Setting up StreamableHTTP server on port ${port}`);
   // Create Hono app
   const app = new Hono();
   // Bind to all interfaces by default (required for hosted environments).
-  // Do NOT default to `HOSTNAME` because container runtimes often set it to an
-  // internal name that resolves to loopback, making the service unreachable.
-  const hostname = process.env.HOST || '0.0.0.0';
+  // Do NOT trust `HOST`/`HOSTNAME` to be bindable: platforms often set it to a
+  // public domain name, which will crash `listen()` with EADDRNOTAVAIL.
+  const hostname = resolveBindHost();
+  console.error(`Using hostname: ${hostname}`);
 
   // Enable CORS
   app.use(
@@ -49,12 +52,7 @@ export async function setupStreamableHttpServer(server: Server, port = 3000) {
 
   // Root route (useful for platform health checks that probe "/")
   app.get('/', (c) => {
-    return c.json({
-      status: 'OK',
-      server: Config.SERVER_NAME,
-      version: Config.SERVER_VERSION,
-      endpoints: { health: '/health', mcp: '/mcp' },
-    });
+    return c.text('OK', 200);
   });
 
   // Add a simple health check endpoint
@@ -224,6 +222,7 @@ export async function setupStreamableHttpServer(server: Server, port = 3000) {
   });
 
   // Start the server
+  console.error(`Starting HTTP server on ${hostname}:${port}`);
   const httpServer = serve(
     {
       fetch: app.fetch,
@@ -231,6 +230,7 @@ export async function setupStreamableHttpServer(server: Server, port = 3000) {
       hostname,
     },
     (info) => {
+      console.error(`Server listening on ${hostname}:${info.port}`);
       console.log(
         `MCP StreamableHTTP Server running at http://localhost:${info.port}`,
       );

@@ -15,6 +15,7 @@ import type { Context } from 'hono';
 import type { SSEStreamingApi } from 'hono/streaming';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { Config } from './config.js';
+import { resolveBindHost } from './utils/bind-host.js';
 
 interface AuthInfo {
   token?: string;
@@ -154,9 +155,9 @@ export async function setupWebServer(server: Server, port = 3000) {
   // Create Hono app
   const app = new Hono();
   // Bind to all interfaces by default (required for hosted environments).
-  // Do NOT default to `HOSTNAME` because container runtimes often set it to an
-  // internal name that resolves to loopback, making the service unreachable.
-  const hostname = process.env.HOST || '0.0.0.0';
+  // Do NOT trust `HOST`/`HOSTNAME` to be bindable: platforms often set it to a
+  // public domain name, which will crash `listen()` with EADDRNOTAVAIL.
+  const hostname = resolveBindHost();
 
   // Enable CORS
   app.use('*', cors());

@@ -108,7 +108,11 @@ async function startWebServer() {
 async function startStreamableHttpServer() {
   // Set up StreamableHTTP transport
   try {
+    console.error('Starting StreamableHTTP server...');
+    console.error(`PORT env var: ${process.env.PORT}`);
+    console.error(`RAILWAY_PROJECT_ID: ${process.env.RAILWAY_PROJECT_ID}`);
     const port = parsePort(process.env.PORT) ?? DEFAULT_PORT;
+    console.error(`Using port: ${port}`);
     await setupStreamableHttpServer(await serverSetup(), port);
   } catch (error) {
     console.error('Error setting up StreamableHTTP server:', error);
