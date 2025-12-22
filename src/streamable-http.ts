@@ -57,11 +57,19 @@ export async function setupStreamableHttpServer(server: Server, port = 3000) {
 
   // Add a simple health check endpoint
   app.get('/health', (c) => {
-    return c.json({
-      status: 'OK',
-      server: Config.SERVER_NAME,
-      version: Config.SERVER_VERSION,
-    });
+    console.error(`Health check requested: ${c.req.url}`);
+    try {
+      const response = c.json({
+        status: 'OK',
+        server: Config.SERVER_NAME,
+        version: Config.SERVER_VERSION,
+      });
+      console.error('Health check response created');
+      return response;
+    } catch (err) {
+      console.error('Error in health check:', err);
+      return c.json({ status: 'Error', error: String(err) }, 500);
+    }
   });
 
   const handleMcpRequest = async (c: any) => {

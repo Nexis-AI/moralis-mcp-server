@@ -65,6 +65,7 @@ export async function serverSetup(
    */
   let toolDefinitionMap: Record<string, McpToolDefinition> = {};
   const toolDefinitionsReady = (async () => {
+    console.error('Starting to load tool definitions...');
     let merged: Record<string, McpToolDefinition> = {};
     for (const config of configArray) {
       try {
