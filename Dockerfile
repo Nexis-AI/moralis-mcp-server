@@ -12,7 +12,7 @@ COPY . .
 RUN npm run build
 
 # Runtime stage
-FROM node:lts-slim
+FROM node:lts
 WORKDIR /app
 
 # Copy built artifacts and install production dependencies
@@ -25,7 +25,7 @@ ENV NODE_ENV=production
 
 # Railway (and most hosted platforms) expect an HTTP server listening on $PORT.
 # Force Streamable HTTP transport in containerized deployments.
-EXPOSE 3000
+EXPOSE 8080
 
 # Default execution command
 ENTRYPOINT ["node", "./dist/index.js", "--transport", "streamable-http"]

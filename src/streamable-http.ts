@@ -24,7 +24,7 @@ export async function setupStreamableHttpServer(server: Server, port = 3000) {
   // Bind to all interfaces by default (required for hosted environments).
   // Do NOT trust `HOST`/`HOSTNAME` to be bindable: platforms often set it to a
   // public domain name, which will crash `listen()` with EADDRNOTAVAIL.
-  const hostname = resolveBindHost();
+  const hostname = '0.0.0.0'; // Hardcoded for Railway reliability
   console.error(`Using hostname: ${hostname}`);
 
   // Enable CORS

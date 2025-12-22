@@ -174,3 +174,8 @@ main(transport).catch((error) => {
   console.error('Fatal error in main execution:', error);
   process.exit(1);
 });
+
+// Heartbeat to debug event loop starvation
+setInterval(() => {
+  console.error(`[Heartbeat] Process active. Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
+}, 5000).unref();
