@@ -170,7 +170,12 @@ const defaultTransport: TransportType =
 const transport = cliArgs.transport ?? defaultTransport;
 
 // Start the server
-main(transport).catch((error) => {
+// Start the server
+main(transport).then(() => {
+  console.error('Server startup sequence complete. Keeping process alive...');
+  // Prevent the process from exiting by keeping a pending promise
+  return new Promise(() => {});
+}).catch((error) => {
   console.error('Fatal error in main execution:', error);
   process.exit(1);
 });
@@ -178,4 +183,4 @@ main(transport).catch((error) => {
 // Heartbeat to debug event loop starvation
 setInterval(() => {
   console.error(`[Heartbeat] Process active. Memory: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`);
-}, 5000).unref();
+}, 5000);
