@@ -69,10 +69,34 @@ export async function serverSetup(
     let merged: Record<string, McpToolDefinition> = {};
     for (const config of configArray) {
       try {
-        merged = {
-          ...merged,
-          ...(await mapToolDefinitions(config)),
-        };
+        console.error(`Fetching spec from ${config.specUrl}...`);
+        const spec = (await getSpec(config.specUrl)) as OpenAPIV3DocumentX;
+        console.error(`Spec fetched. Size: ${JSON.stringify(spec).length} chars. Dereferencing...`);
+        
+        // Add timeout/race to detect hang
+        const dereferencePromise = SwaggerParser.dereference(spec);
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Dereference timed out')), 20000));
+        
+        const api = (await Promise.race([dereferencePromise, timeoutPromise])) as OpenAPIV3DocumentX;
+        console.error('Dereference complete. Extracting tools...');
+
+        const tools = extractToolsFromApi(api, config.prefix);
+        console.error(`Extracted ${tools.length} tools. Processing blacklist...`);
+
+        const blacklist = Array.isArray(api['x-mcp-blacklist'])
+          ? api['x-mcp-blacklist'].map((e) => `${config.prefix}${e.toLowerCase()}`)
+          : [];
+
+        const segmentMap: Record<string, McpToolDefinition> = {};
+        for (const tool of tools) {
+          if (blacklist.includes(tool.name)) continue;
+          segmentMap[tool.name] = {
+            ...tool,
+            baseUrl: config.baseUrl,
+          };
+        }
+        merged = { ...merged, ...segmentMap };
+        console.error(`Processed ${Object.keys(segmentMap).length} tools from ${config.specUrl}`);
       } catch (error) {
         console.error(
           `Failed to load tools from OpenAPI spec (${config.specUrl}). Starting without these tools.`,
@@ -81,6 +105,7 @@ export async function serverSetup(
       }
     }
     toolDefinitionMap = merged;
+    console.error(`Total tool definitions loaded: ${Object.keys(merged).length}`);
     return merged;
   })();
 
